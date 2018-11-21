@@ -45,3 +45,6 @@ class ExampleTrainer(BaseTrain):
         """using `tf.data` API, so no feed-dict required"""
         _, loss, acc = self.sess.run([self.model.train_step, self.model.cross_entropy, self.model.accuracy])
         return loss, acc
+		
+		
+		

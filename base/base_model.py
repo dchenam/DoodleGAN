@@ -37,6 +37,3 @@ class BaseModel:
 
     def build_model(self):
         raise NotImplementedError
-
-	def model_inputs(real_dim, z_dim):
-		raise NotImplementedError

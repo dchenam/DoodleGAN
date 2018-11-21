@@ -16,12 +16,17 @@ class ExampleModel(BaseModel):
         self.build_model()
         self.init_saver()
 
+	def model_inputs(real_dim, z_dim):
+		inputs_real = tf.placeholder(tf.float32, (None, real_dim), name='input_real') 
+		inputs_z = tf.placeholder(tf.float32, (None, z_dim), name='input_z')
+		
+		return inputs_real, inputs_z	
+		
     def build_model(self):
         # network_architecture
         #d1 = tf.layers.dense(self.inputs, 512, activation=tf.nn.relu, name="densee2")
         #d2 = tf.layers.dense(d1, 10)
 		#d_final = tf.layers.dense(d1, 345)	#there are 345 categories of Doodles 
-        
 		
 		###############
 		# Generator   #

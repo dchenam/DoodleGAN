@@ -1,15 +1,15 @@
 import tensorflow as tf
 
-
 class BaseTrain:
     def __init__(self, sess, model, inputs, config, logger):
         self.model = model
         self.logger = logger
-        self.config = config
+        self.config = config	#configs/example.json
         self.sess = sess
         self.inputs = inputs
         self.init = tf.group(tf.global_variables_initializer(), tf.local_variables_initializer())
         self.sess.run(self.init)
+		
 
     def train(self):
         for cur_epoch in range(self.model.cur_epoch_tensor.eval(self.sess), self.config.num_epochs + 1, 1):
@@ -19,9 +19,10 @@ class BaseTrain:
     def train_epoch(self):
         """
         implement the logic of epoch:
-        -loop ever the number of iteration in the config and call teh train step
-        -add any summaries you want using the sammary
+        -loop ever the number of iteration in the config and call the train step
+        -add any summaries you want using the summary
         """
+		
         raise NotImplementedError
 
     def train_step(self):

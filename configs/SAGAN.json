@@ -4,6 +4,9 @@
   "num_iter_per_epoch": 10,
   "d_learning_rate": 0.0004,
   "g_learning_rate": 0.0001,
+  "z_dim": 128,
   "batch_size": 16,
+  "n_critic": 1,
+  "save_iter": 300,
   "state_size": [784]
 }

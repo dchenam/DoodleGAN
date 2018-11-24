@@ -15,70 +15,56 @@ class SAGANModel(BaseModel):
                     this can be 'tf.placeholder' or outputs of 'tf.data'
         """
         super(SAGANModel, self).__init__(config)
+        self.layer_num = 0
         self.inputs = inputs
+        self.d_optim = None
+        self.g_optim = None
         self.build_model()
         self.init_saver()
 
     def generator(self, z, is_training=True, reuse=False):
         with tf.variable_scope("generator", reuse=reuse):
             ch = 1024
-            x = deconv(z, channels=ch, kernel=4, stride=1, padding='VALID', use_bias=False, sn=self.sn, scope='deconv')
+            x = deconv(z, channels=ch, kernel=4, stride=1, padding='VALID', use_bias=False, sn=True, scope='deconv')
             x = batch_norm(x, is_training, scope='batch_norm')
             x = relu(x)
 
             for i in range(self.layer_num // 2):
-                if self.up_sample:
-                    x = up_sample(x, scale_factor=2)
-                    x = conv(x, channels=ch // 2, kernel=3, stride=1, pad=1, sn=self.sn, scope='up_conv_' + str(i))
-                    x = batch_norm(x, is_training, scope='batch_norm_' + str(i))
-                    x = relu(x)
-
-                else:
-                    x = deconv(x, channels=ch // 2, kernel=4, stride=2, use_bias=False, sn=self.sn,
-                               scope='deconv_' + str(i))
-                    x = batch_norm(x, is_training, scope='batch_norm_' + str(i))
-                    x = relu(x)
+                x = up_sample(x, scale_factor=2)
+                x = conv(x, channels=ch // 2, kernel=3, stride=1, pad=1, sn=True, scope='up_conv_' + str(i))
+                x = batch_norm(x, is_training, scope='batch_norm_' + str(i))
+                x = relu(x)
 
                 ch = ch // 2
 
             # Self Attention
-            x = self.attention(x, ch, sn=self.sn, scope="attention", reuse=reuse)
+            x = self.attention(x, ch, sn=True, scope="attention", reuse=reuse)
 
             for i in range(self.layer_num // 2, self.layer_num):
-                if self.up_sample:
-                    x = up_sample(x, scale_factor=2)
-                    x = conv(x, channels=ch // 2, kernel=3, stride=1, pad=1, sn=self.sn, scope='up_conv_' + str(i))
-                    x = batch_norm(x, is_training, scope='batch_norm_' + str(i))
-                    x = relu(x)
-
-                else:
-                    x = deconv(x, channels=ch // 2, kernel=4, stride=2, use_bias=False, sn=self.sn,
-                               scope='deconv_' + str(i))
-                    x = batch_norm(x, is_training, scope='batch_norm_' + str(i))
-                    x = relu(x)
+                x = up_sample(x, scale_factor=2)
+                x = conv(x, channels=ch // 2, kernel=3, stride=1, pad=1, sn=True, scope='up_conv_' + str(i))
+                x = batch_norm(x, is_training, scope='batch_norm_' + str(i))
+                x = relu(x)
 
                 ch = ch // 2
 
-            if self.up_sample:
-                x = up_sample(x, scale_factor=2)
-                x = conv(x, channels=self.c_dim, kernel=3, stride=1, pad=1, sn=self.sn, scope='G_conv_logit')
-                x = tanh(x)
 
-            else:
-                x = deconv(x, channels=self.c_dim, kernel=4, stride=2, use_bias=False, sn=self.sn,
-                           scope='G_deconv_logit')
-                x = tanh(x)
+            x = up_sample(x, scale_factor=2)
+            x = conv(x, channels=self.c_dim, kernel=3, stride=1, pad=1, sn=True, scope='G_conv_logit')
+            x = tanh(x)
+
+
 
             return x
 
     def discriminator(self, x, is_training=True, reuse=False):
         with tf.variable_scope("discriminator", reuse=reuse):
             ch = 64
-            x = conv(x, channels=ch, kernel=4, stride=2, pad=1, sn=self.sn, use_bias=False, scope='conv')
+            x = conv(x, channels=ch, kernel=4, stride=2, pad=1, sn=True, use_bias=False, scope='conv')
             x = lrelu(x, 0.2)
 
             for i in range(self.layer_num // 2):
-                x = conv(x, channels=ch * 2, kernel=4, stride=2, pad=1, sn=self.sn, use_bias=False,
+                x = conv(x, channels=ch * 2, kernel=4, stride=2, pad=1, sn=True, use_bias=False,
                          scope='conv_' + str(i))
                 x = batch_norm(x, is_training, scope='batch_norm' + str(i))
                 x = lrelu(x, 0.2)
@@ -86,17 +72,17 @@ class SAGANModel(BaseModel):
                 ch = ch * 2
 
             # Self Attention
-            x = self.attention(x, ch, sn=self.sn, scope="attention", reuse=reuse)
+            x = self.attention(x, ch, sn=True, scope="attention", reuse=reuse)
 
             for i in range(self.layer_num // 2, self.layer_num):
-                x = conv(x, channels=ch * 2, kernel=4, stride=2, pad=1, sn=self.sn, use_bias=False,
+                x = conv(x, channels=ch * 2, kernel=4, stride=2, pad=1, sn=True, use_bias=False,
                          scope='conv_' + str(i))
                 x = batch_norm(x, is_training, scope='batch_norm' + str(i))
                 x = lrelu(x, 0.2)
 
                 ch = ch * 2
 
-            x = conv(x, channels=4, stride=1, sn=self.sn, use_bias=False, scope='D_logit')
+            x = conv(x, channels=4, stride=1, sn=True, use_bias=False, scope='D_logit')
 
             return x
 
@@ -124,9 +110,10 @@ class SAGANModel(BaseModel):
         noise = tf.random_normal([0, 100])
         label = self.inputs[1]
         img = self.inputs[0]
+        self.layer_num = int(np.log2(img.size())) - 3
 
         # noises
-        z = tf.placeholder(tf.float32, [self.batch_size, 1, 1, self.z_dim], name='z')
+        z = tf.placeholder(tf.float32, [self.config.batch_size, 1, 1, 100], name='z')
 
         # output of D for real images
         real_logits = self.discriminator(img)
@@ -145,9 +132,9 @@ class SAGANModel(BaseModel):
         t_vars = tf.trainable_variables()
         d_vars = [var for var in t_vars if 'discriminator' in var.name]
         g_vars = [var for var in t_vars if 'generator' in var.name]
-        self.d_optim = tf.train.AdamOptimizer(self.d_learning_rate, beta1=self.beta1, beta2=self.beta2).minimize(
+        self.d_optim = tf.train.AdamOptimizer(self.config.d_learning_rate, beta1=self.beta1, beta2=self.beta2).minimize(
             self.d_loss, var_list=d_vars)
-        self.g_optim = tf.train.AdamOptimizer(self.g_learning_rate, beta1=self.beta1, beta2=self.beta2).minimize(
+        self.g_optim = tf.train.AdamOptimizer(self.config.g_learning_rate, beta1=self.beta1, beta2=self.beta2).minimize(
             self.g_loss, var_list=g_vars)
 
 

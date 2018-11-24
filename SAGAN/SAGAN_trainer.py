@@ -42,5 +42,20 @@ class SAGANTrainer(BaseTrain):
 
     def train_step(self):
         """using `tf.data` API, so no feed-dict required"""
-        _, loss, acc = self.sess.run([self.model.train_step, self.model.cross_entropy, self.model.accuracy])
+        # update D network
+        _, summary_str, d_loss = self.sess.run([self.d_optim, self.d_sum, self.d_loss], feed_dict=train_feed_dict)
+
+        # update G network
+        g_loss = None
+        if (counter - 1) % self.n_critic == 0:
+            _, summary_str, g_loss = self.sess.run([self.g_optim, self.g_sum, self.g_loss], feed_dict=train_feed_dict)
+            self.writer.add_summary(summary_str, counter)
+            past_g_loss = g_loss
+
+        # display training status
+        counter += 1
+        if g_loss == None:
+            g_loss = past_g_loss
+        print("Epoch: [%2d] [%5d/%5d] time: %4.4f, d_loss: %.8f, g_loss: %.8f" \
+              % (epoch, idx, self.iteration, time.time() - start_time, d_loss, g_loss))
         return loss, acc

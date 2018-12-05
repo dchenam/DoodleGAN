@@ -180,7 +180,7 @@ def convert_data(trainingdata_dir,
     features["class_index"] = tf.train.Feature(int64_list=tf.train.Int64List(
         value=[classnames.index(class_name)]))
     features["doodle"] = tf.train.Feature(int64_list=tf.train.Int64List(
-        value=doodle_flat.shape))
+        value=doodle_flat))
 
     f = tf.train.Features(feature=features)
     example = tf.train.Example(features=f)

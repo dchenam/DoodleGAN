@@ -39,8 +39,9 @@ def main():
     filenames = 'test_data/training.tfrecord-?????-of-?????'
 
     # create your data input pipeline
+    # in the features - class_index & doodle
     features, labels = input_fn(config, is_training, filenames)
-    print(features)
+    print(labels)
 
     # # create instance of the model you want
     # model = ExampleModel(config, is_training, inputs)

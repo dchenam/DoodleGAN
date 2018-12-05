@@ -182,7 +182,7 @@ def input_fn(config, is_training, filenames):
             functools.partial(_parse_tfexample_fn, is_training=is_training),
             )
 
-    dataset = dataset.prefetsch(10000)
+    dataset = dataset.prefetch(10000)
     if is_training:
         dataset = dataset.shuffle(buffer_size=1000000)
     # Our inputs are variable length, so pad them.
@@ -200,7 +200,7 @@ def _parse_tfexample_fn(example_proto, is_training):
                 "class_index": tf.FixedLenFeature((), tf.int64, default_value=0)}
 
     parsed_features = tf.parse_single_example(example_proto, features)
-    parsed_features["doodle"] = tf.sparse_tensor_to_dense(parsed_features["doodle"])
+    # parsed_features["doodle"] = tf.sparse_tensor_to_dense(parsed_features["doodle"])
     labels = parsed_features["class_index"]
 
     return parsed_features, labels

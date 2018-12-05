@@ -4,8 +4,8 @@ import tensorflow as tf
 from shutil import copy
 
 from model.input_fn import input_fn
-from model.example_model import ExampleModel
-from model.example_trainer import ExampleTrainer
+# from model.example_model import ExampleModel
+# from model.example_trainer import ExampleTrainer
 from utils import *
 
 
@@ -36,10 +36,11 @@ def main():
     #filennames should be type of file pattern
 
     is_training = True;
-    filenames = '../../training_data/training.tfrecord-?????-of-?????'
+    filenames = 'test_data/training.tfrecord-?????-of-?????'
 
     # create your data input pipeline
     features, labels = input_fn(config, is_training, filenames)
+    print(features)
 
     # # create instance of the model you want
     # model = ExampleModel(config, is_training, inputs)

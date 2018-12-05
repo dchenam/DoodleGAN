@@ -100,14 +100,16 @@ def convert_to_bitmap(ndjson_line):
         print("Empty inkarray")
         return None, None
 
+    itr = 0
     for stroke in inkarray:
         if len(stroke[0]) != len(stroke[1]):
             print("Inconsistent number of x and y coordinates.")
             return None, None
-
-        x = stroke[0]
-        y = stroke[1]
-        doodle_npy[x-1][y-1] = 1
+        for i in range(stroke_lengths[itr]):
+            x = stroke[0][i]
+            y = stroke[1][i]
+            doodle_npy[x-1][y-1] = 1
+        itr += 1
 
     doodle_flat = doodle_npy.flatten()
     return doodle_flat, class_name

@@ -29,10 +29,10 @@ python create_dataset.py \
   --ndjson_path ${HOME}/ndjson \
   --output_path ${HOME}/tfrecord
 """
-
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
+from tqdm import tqdm
 
 import argparse
 import json
@@ -100,16 +100,12 @@ def convert_to_bitmap(ndjson_line):
         print("Empty inkarray")
         return None, None
 
-    itr = 0
     for stroke in inkarray:
         if len(stroke[0]) != len(stroke[1]):
             print("Inconsistent number of x and y coordinates.")
             return None, None
-        for i in range(stroke_lengths[itr]):
-            x = stroke[0][i]
-            y = stroke[1][i]
-            doodle_npy[x-1][y-1] = 1
-        itr += 1
+        for (x, y) in zip(stroke[0], stroke[1]):
+            doodle_npy[x][y] = 1
 
     doodle_flat = doodle_npy.flatten()
     return doodle_flat, class_name
@@ -165,7 +161,8 @@ def convert_data(trainingdata_dir,
   reading_order = list(range(len(file_handles))) * observations_per_class
   random.shuffle(reading_order)
 
-  for c in reading_order:
+  for c in tqdm(reading_order):
+  # for c in reading_order:
     '''reading ndjson file line by line (each line is object)'''
     lines = file_handles[c].readline()
     doodle_flat = None
@@ -207,13 +204,13 @@ def main(argv):
       classnames=[],
       output_shards=FLAGS.output_shards,
       offset=0)
-  convert_data(
-      FLAGS.ndjson_path,
-      FLAGS.eval_observations_per_class,
-      os.path.join(FLAGS.output_path, "eval.tfrecord"),
-      classnames=classnames,
-      output_shards=FLAGS.output_shards,
-      offset=FLAGS.train_observations_per_class)
+  # convert_data(
+  #     FLAGS.ndjson_path,
+  #     FLAGS.eval_observations_per_class,
+  #     os.path.join(FLAGS.output_path, "eval.tfrecord"),
+  #     classnames=classnames,
+  #     output_shards=FLAGS.output_shards,
+  #     offset=FLAGS.train_observations_per_class)
 
 
 if __name__ == "__main__":
@@ -232,18 +229,18 @@ if __name__ == "__main__":
   parser.add_argument(
       "--train_observations_per_class",
       type=int,
-      default=10000,
-      help="How many items per class to load for training.")
-  parser.add_argument(
-      "--eval_observations_per_class",
-      type=int,
       default=1000,
-      help="How many items per class to load for evaluation.")
-  parser.add_argument(
-      "--output_shards",
-      type=int,
-      default=10,
-      help="Number of shards for the output.")
+      help="How many items per class to load for training.")
+  # parser.add_argument(
+  #     "--eval_observations_per_class",
+  #     type=int,
+  #     default=1000,
+  #     help="How many items per class to load for evaluation.")
+  # parser.add_argument(
+  #     "--output_shards",
+  #     type=int,
+  #     default=10,
+  #     help="Number of shards for the output.")
 
   FLAGS, unparsed = parser.parse_known_args()
   tf.app.run(main=main, argv=[sys.argv[0]] + unparsed)

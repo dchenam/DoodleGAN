@@ -182,10 +182,6 @@ def input_fn(config, is_training, filenames):
             functools.partial(_parse_tfexample_fn, is_training=is_training),
             )
 
-    # dataset = dataset.map(
-    #     functools.partial(_parse_tfexample_fn, is_training=is_training),
-    #     num_parallel_calls=10)
-
     dataset = dataset.prefetsch(10000)
     if is_training:
         dataset = dataset.shuffle(buffer_size=1000000)
@@ -199,21 +195,12 @@ def input_fn(config, is_training, filenames):
 
 def _parse_tfexample_fn(example_proto, is_training):
     """Parse a single record which is expected to be a tensorflow.Example."""
-    feature_to_type = {
-        'ink': tf.VarLenFeature(dtype=tf.float32),
-        "shape": tf.FixedLenFeature([2], dtype=tf.int64)
-    }
-    # if is_training != tf.estimator.ModeKeys.PREDICT:
-    # The labels won't be available at inference time, so don't add them
-    # to the list of feature_columns to be read.
-    feature_to_type["class_index"] = tf.FixedLenFeature([1], dtype=tf.int64)
 
-    parsed_features = tf.parse_single_example(example_proto, feature_to_type)
-    labels = None
+    features = {"doodle": tf.FixedLenFeature((), dtype=tf.int64),
+                "class_index": tf.FixedLenFeature((), tf.int64, default_value=0)}
 
-    # if mode != tf.estimator.ModeKeys.PREDICT:
+    parsed_features = tf.parse_single_example(example_proto, features)
+    parsed_features["doodle"] = tf.sparse_tensor_to_dense(parsed_features["doodle"])
     labels = parsed_features["class_index"]
-    parsed_features["ink"] = tf.sparse_tensor_to_dense(parsed_features["ink"])
 
     return parsed_features, labels
-

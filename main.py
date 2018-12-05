@@ -31,33 +31,38 @@ def main():
     sess = tf.Session()
 
     # check training or testing
-    is_training = True if args.mode == 'train' else False
+    # is_training = True if args.mode == 'train' else False
+
+    #filennames should be type of file pattern
+
+    is_training = True;
+    filenames = '../../training_data/training.tfrecord-?????-of-?????'
 
     # create your data input pipeline
-    inputs = input_fn(config, is_training)
+    features, labels = input_fn(config, is_training, filenames)
 
-    # create instance of the model you want
-    model = ExampleModel(config, is_training, inputs)
-
-    # create tensorboard & terminal logger
-    logger = Logger(sess, config)
-    logger.set_logger(log_path=os.path.join(
-        config.model_dir, args.mode + '.log'))
-
-    # enter training or testing mode
-    if is_training:
-        logging.info(config.exp_description)
-        logging.info("creating trainer...")
-
-        # create trainer and path all previous components to it
-        trainer = ExampleTrainer(sess, model, inputs, config, logger)
-
-        # here you train your model
-        trainer.train()
-
-    else:
-        # load latest checkpoint
-        model.load(sess)
+    # # create instance of the model you want
+    # model = ExampleModel(config, is_training, inputs)
+    #
+    # # create tensorboard & terminal logger
+    # logger = Logger(sess, config)
+    # logger.set_logger(log_path=os.path.join(
+    #     config.model_dir, args.mode + '.log'))
+    #
+    # # enter training or testing mode
+    # if is_training:
+    #     logging.info(config.exp_description)
+    #     logging.info("creating trainer...")
+    #
+    #     # create trainer and path all previous components to it
+    #     trainer = ExampleTrainer(sess, model, inputs, config, logger)
+    #
+    #     # here you train your model
+    #     trainer.train()
+    #
+    # else:
+    #     # load latest checkpoint
+    #     model.load(sess)
 
 
 if __name__ == '__main__':

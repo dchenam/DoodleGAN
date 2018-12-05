@@ -43,40 +43,75 @@ import numpy as np
 import tensorflow as tf
 
 
-def parse_line(ndjson_line):
-  """Parse an ndjson line and return ink (as np array) and classname."""
-  sample = json.loads(ndjson_line)
-  class_name = sample["word"]
-  if not class_name:
-    print ("Empty classname")
-    return None, None
-  inkarray = sample["drawing"]
-  stroke_lengths = [len(stroke[0]) for stroke in inkarray]
-  total_points = sum(stroke_lengths)
-  np_ink = np.zeros((total_points, 3), dtype=np.float32)
-  current_t = 0
-  if not inkarray:
-    print("Empty inkarray")
-    return None, None
-  for stroke in inkarray:
-    if len(stroke[0]) != len(stroke[1]):
-      print("Inconsistent number of x and y coordinates.")
-      return None, None
-    for i in [0, 1]:
-      np_ink[current_t:(current_t + len(stroke[0])), i] = stroke[i]
-    current_t += len(stroke[0])
-    np_ink[current_t - 1, 2] = 1  # stroke_end
-  # Preprocessing.
-  # 1. Size normalization.
-  lower = np.min(np_ink[:, 0:2], axis=0)
-  upper = np.max(np_ink[:, 0:2], axis=0)
-  scale = upper - lower
-  scale[scale == 0] = 1
-  np_ink[:, 0:2] = (np_ink[:, 0:2] - lower) / scale
-  # 2. Compute deltas.
-  np_ink[1:, 0:2] -= np_ink[0:-1, 0:2]
-  np_ink = np_ink[1:, :]
-  return np_ink, class_name
+# def parse_line(ndjson_line):
+#   """Parse an ndjson line and return ink (as np array) and classname."""
+#   sample = json.loads(ndjson_line)
+#   class_name = sample["word"]
+#   if not class_name:
+#     print ("Empty classname")
+#     return None, None
+#   inkarray = sample["drawing"]
+#   stroke_lengths = [len(stroke[0]) for stroke in inkarray]
+#   total_points = sum(stroke_lengths)
+#   np_ink = np.zeros((total_points, 3), dtype=np.float32)
+#   current_t = 0
+#
+#   if not inkarray:
+#     print("Empty inkarray")
+#     return None, None
+#   for stroke in inkarray:
+#     if len(stroke[0]) != len(stroke[1]):
+#       print("Inconsistent number of x and y coordinates.")
+#       return None, None
+#     for i in [0, 1]:
+#       np_ink[current_t:(current_t + len(stroke[0])), i] = stroke[i]
+#     current_t += len(stroke[0])
+#     np_ink[current_t - 1, 2] = 1  # stroke_end
+#   # Preprocessing.
+#   # 1. Size normalization.
+#   lower = np.min(np_ink[:, 0:2], axis=0)
+#   upper = np.max(np_ink[:, 0:2], axis=0)
+#   scale = upper - lower
+#   scale[scale == 0] = 1
+#   np_ink[:, 0:2] = (np_ink[:, 0:2] - lower) / scale
+#   # 2. Compute deltas.
+#   np_ink[1:, 0:2] -= np_ink[0:-1, 0:2]
+#   np_ink = np_ink[1:, :]
+#   return np_ink, class_name
+
+def convert_to_bitmap(ndjson_line):
+    """Parse an ndjson line and return doodle_flat (as np array) and classname."""
+
+    doodle_size = (256, 256)
+    doodle_npy = np.zeros(doodle_size, dtype=np.int64)
+
+    doodle = json.loads(ndjson_line)
+    class_name = doodle["word"]
+
+    if not class_name:
+        print("Empty classname")
+        return None, None
+
+    inkarray = doodle["drawing"]
+    stroke_lengths = [len(stroke[0]) for stroke in inkarray]
+    total_points = sum(stroke_lengths)
+
+    if not inkarray:
+        print("Empty inkarray")
+        return None, None
+
+    for stroke in inkarray:
+        if len(stroke[0]) != len(stroke[1]):
+            print("Inconsistent number of x and y coordinates.")
+            return None, None
+
+        x = stroke[0]
+        y = stroke[1]
+        doodle_npy[x-1][y-1] = 1
+
+    doodle_flat = doodle_npy.flatten()
+    return doodle_flat, class_name
+
 
 
 def convert_data(trainingdata_dir,
@@ -129,21 +164,22 @@ def convert_data(trainingdata_dir,
   random.shuffle(reading_order)
 
   for c in reading_order:
-    line = file_handles[c].readline()
-    ink = None
-    while ink is None:
-      ink, class_name = parse_line(line)
-      if ink is None:
-        print ("Couldn't parse ink from '" + line + "'.")
+    '''reading ndjson file line by line (each line is object)'''
+    lines = file_handles[c].readline()
+    doodle_flat = None
+    while doodle_flat is None:
+        doodle_flat, class_name = convert_to_bitmap(lines)
+        if doodle_flat is None:
+            print("Couldn't parse ink from '" + lines + "'.")
     if class_name not in classnames:
-      classnames.append(class_name)
+        classnames.append(class_name)
+
     features = {}
     features["class_index"] = tf.train.Feature(int64_list=tf.train.Int64List(
         value=[classnames.index(class_name)]))
-    features["ink"] = tf.train.Feature(float_list=tf.train.FloatList(
-        value=ink.flatten()))
-    features["shape"] = tf.train.Feature(int64_list=tf.train.Int64List(
-        value=ink.shape))
+    features["doodle"] = tf.train.Feature(int64_list=tf.train.Int64List(
+        value=doodle_flat.shape))
+
     f = tf.train.Features(feature=features)
     example = tf.train.Example(features=f)
     writers[_pick_output_shard()].write(example.SerializeToString())

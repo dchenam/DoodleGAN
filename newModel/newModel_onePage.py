@@ -40,7 +40,8 @@ def discriminator(x, n_units=128, reuse=False, alpha=0.01):
         return out, logits
 
 # Size of input image to discriminator
-input_size = 784
+#input_size = 784
+input_size = 65536
 # Size of latent vector to generator
 z_size = 100
 # Sizes of hidden layers in generator and discriminator

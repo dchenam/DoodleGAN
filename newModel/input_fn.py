@@ -29,6 +29,8 @@ def input_fn(config, filenames):
 
 def parse_fn(drawit_proto):
     """Parse a single record which is expected to be a tensorflow.Example."""
+	# return 28*28 2d bitmap as feature, and a one-hot label
+
     num_classes = 345
 
     features = {"doodle": tf.FixedLenFeature((28 * 28), dtype=tf.int64),

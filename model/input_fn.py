@@ -24,7 +24,7 @@ def input_fn(config, filenames):
                )
     features, labels = dataset.make_one_shot_iterator().get_next()
 
-    return features, labels
+    return (features, labels)
 
 
 def parse_fn(drawit_proto):
@@ -40,6 +40,15 @@ def parse_fn(drawit_proto):
     labels = tf.one_hot(labels, num_classes)
 
     features = parsed_features['doodle']
-    features = tf.cast(features, tf.float32)
+
+    features = tf.reshape(features, [28, 28, 1])
+    features = tf.cast(features, tf.uint8)
+
+    # convert from 0 - 255 to 0 - 1
+    features = tf.image.convert_image_dtype(features, tf.float32)
+
+    # normalize images from 0 - 1 to between -1 and 1
+    features = tf.multiply(features, 2)
+    features = tf.subtract(features, 1)
 
     return features, labels

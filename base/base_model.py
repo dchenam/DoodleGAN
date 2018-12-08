@@ -6,7 +6,7 @@ class BaseModel:
     def __init__(self, config):
         self.config = config
         # init the global step
-        self.global_step = tf.train.get_or_create_global_step()
+        self.global_step_tensor = tf.train.get_or_create_global_step()
         # init the epoch counter
         self.init_cur_epoch()
 

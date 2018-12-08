@@ -18,3 +18,6 @@ def print_network():
     print(total_parameters)
 
 
+def denorm(image):
+    image = (image + 1) / 2
+    return np.clip(image, 0, 1)

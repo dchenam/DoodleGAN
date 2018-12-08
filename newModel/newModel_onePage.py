@@ -3,7 +3,7 @@
 import pickle as pkl
 import numpy as np
 import tensorflow as tf
-import matplotlib.pyplot %matplotlib inline
+import matplotlib.pyplot
 from input_fn import input_fn
 
 from tensorflow.examples.tutorials.mnist import input_data
@@ -13,35 +13,35 @@ features, labels = input_fn('GAN.json', 'training_data/*')
 
 
 def model_inputs(real_dim, z_dim):
-    inputs_real = tf.placeholder(tf.float32, (None, real_dim), name='input_real') 
-    inputs_z = tf.placeholder(tf.float32, (None, z_dim), name='input_z')
-    
-    return inputs_real, inputs_z
+	inputs_real = tf.placeholder(tf.float32, (None, real_dim), name='input_real') 
+	inputs_z = tf.placeholder(tf.float32, (None, z_dim), name='input_z')
+	
+	return inputs_real, inputs_z
 	
 def generator(z, out_dim, n_units=128, reuse=False, alpha=0.01):
-    with tf.variable_scope('generator', reuse=reuse):
-        # Hidden layer
-        h1 = tf.layers.dense(z, n_units, activation=None)
-        # Leaky ReLU
-        h1 = tf.maximum(alpha * h1, h1)
-        
-        # Logits and tanh output
-        logits = tf.layers.dense(h1, out_dim, activation=None)
-        out = tf.tanh(logits)
-        
-        return out
+	with tf.variable_scope('generator', reuse=reuse):
+		# Hidden layer
+		h1 = tf.layers.dense(z, n_units, activation=None)
+		# Leaky ReLU
+		h1 = tf.maximum(alpha * h1, h1)
+		
+		# Logits and tanh output
+		logits = tf.layers.dense(h1, out_dim, activation=None)
+		out = tf.tanh(logits)
+		
+		return out
 		
 def discriminator(x, n_units=128, reuse=False, alpha=0.01):
-    with tf.variable_scope('discriminator', reuse=reuse):
-        # Hidden layer
-        h1 = tf.layers.dense(x, n_units, activation=None)
-        # Leaky ReLU
-        h1 = tf.maximum(alpha * h1, h1)
-        
-        logits = tf.layers.dense(h1, 1, activation=None)
-        out = tf.sigmoid(logits)
-        
-        return out, logits
+	with tf.variable_scope('discriminator', reuse=reuse):
+		# Hidden layer
+		h1 = tf.layers.dense(x, n_units, activation=None)
+		# Leaky ReLU
+		h1 = tf.maximum(alpha * h1, h1)
+		
+		logits = tf.layers.dense(h1, 1, activation=None)
+		out = tf.sigmoid(logits)
+		
+		return out, logits
 
 # Size of input image to discriminator
 #input_size = 784
@@ -70,16 +70,16 @@ d_model_fake, d_logits_fake = discriminator(g_model, reuse=True, n_units=d_hidde
 
 # Calculate losses
 d_loss_real = tf.reduce_mean(
-                  tf.nn.sigmoid_cross_entropy_with_logits(logits=d_logits_real, 
-                                                          labels=tf.ones_like(d_logits_real) * (1 - smooth)))
+				  tf.nn.sigmoid_cross_entropy_with_logits(logits=d_logits_real, 
+														  labels=tf.ones_like(d_logits_real) * (1 - smooth)))
 d_loss_fake = tf.reduce_mean(
-                  tf.nn.sigmoid_cross_entropy_with_logits(logits=d_logits_fake, 
-                                                          labels=tf.zeros_like(d_logits_real)))
+				  tf.nn.sigmoid_cross_entropy_with_logits(logits=d_logits_fake, 
+														  labels=tf.zeros_like(d_logits_real)))
 d_loss = d_loss_real + d_loss_fake
 
 g_loss = tf.reduce_mean(
-             tf.nn.sigmoid_cross_entropy_with_logits(logits=d_logits_fake,
-                                                     labels=tf.ones_like(d_logits_fake)))
+			 tf.nn.sigmoid_cross_entropy_with_logits(logits=d_logits_fake,
+													 labels=tf.ones_like(d_logits_fake)))
 
 # Optimizers
 learning_rate = 0.002
@@ -99,62 +99,60 @@ losses = []
 # Only save generator variables
 saver = tf.train.Saver(var_list=g_vars)
 with tf.Session() as sess:
-    sess.run(tf.global_variables_initializer())
-    for e in range(epochs):
+	sess.run(tf.global_variables_initializer())
+	for e in range(epochs):
 		features_batch, labels_batch = sess.run([features, labels])
-	
 		batch_images = features_batch.reshape((batch_size, 784))
 		batch_images = batch_images*2 - 1
-		
+
 		# Sample random noise for G
 		batch_z_pre = np.random.uniform(-1, 1, size=(batch_size, z_size))
 		labels_batch_pre = labels_batch.eval(sess)
-		
+
 		batch_z = np.empty([batch_size,z_size])
 		
 		for x,y in zip(batch_z_pre, labels_batch_pre):
 			a1 = np.concatenate(x,y,axis=1)
 			batch_z.append(a1, axis=0)
-		
+
 		# Run optimizers
 		_ = sess.run(d_train_opt, feed_dict={input_real: batch_images, input_z: batch_z})
 		_ = sess.run(g_train_opt, feed_dict={input_z: batch_z})
-	
-        # At the end of each epoch, get the losses and print them out
-        train_loss_d = sess.run(d_loss, {input_z: batch_z, input_real: batch_images})
-        train_loss_g = g_loss.eval({input_z: batch_z})
-            
-        print("Epoch {}/{}...".format(e+1, epochs),
-              "Discriminator Loss: {:.4f}...".format(train_loss_d),
-              "Generator Loss: {:.4f}".format(train_loss_g))    
-        # Save losses to view after training
-        losses.append((train_loss_d, train_loss_g))
-        
-        # Sample from generator as we're training for viewing afterwards
-        sample_z_pre = np.random.uniform(-1, 1, size=(batch_size, z_size))
-		
+
+		# At the end of each epoch, get the losses and print them out
+		train_loss_d = sess.run(d_loss, {input_z: batch_z, input_real: batch_images})
+		train_loss_g = g_loss.eval({input_z: batch_z})
+			
+		print("Epoch {}/{}...".format(e+1, epochs),
+			  "Discriminator Loss: {:.4f}...".format(train_loss_d),
+			  "Generator Loss: {:.4f}".format(train_loss_g))	
+		# Save losses to view after training
+		losses.append((train_loss_d, train_loss_g))
+
+		# Sample from generator as we're training for viewing afterwards
+		sample_z_pre = np.random.uniform(-1, 1, size=(batch_size, z_size))
+
 		sample_z = np.empty([batch_size,z_size])
-		
+
 		for x,y in zip(batch_z_pre, labels_batch_pre):
 			a1 = np.concatenate(x,y,axis=1)
 			sample_z.append(a1, axis=0)		
-		
-        gen_samples = sess.run(
-                       generator(input_z, input_size, n_units=g_hidden_size, reuse=True, alpha=alpha),
-                       feed_dict={input_z: sample_z})
-        samples.append(gen_samples)
-        saver.save(sess, './checkpoints/generator.ckpt')
+
+		gen_samples = sess.run(
+					   generator(input_z, input_size, n_units=g_hidden_size, reuse=True, alpha=alpha),
+					   feed_dict={input_z: sample_z})
+		samples.append(gen_samples)
+		saver.save(sess, './checkpoints/generator.ckpt')
 
 # Save training generator samples
 with open('train_samples.pkl', 'wb') as f:
-    pkl.dump(samples, f)
+	pkl.dump(samples, f)
 
 saver = tf.train.Saver(var_list=g_vars)
 with tf.Session() as sess:
-    saver.restore(sess, tf.train.latest_checkpoint('checkpoints'))
-    sample_z = np.random.uniform(-1, 1, size=(16, z_size))
-    gen_samples = sess.run(
-                   generator(input_z, input_size, n_units=g_hidden_size, reuse=True, alpha=alpha),
-                   feed_dict={input_z: sample_z})
+	saver.restore(sess, tf.train.latest_checkpoint('checkpoints'))
+	sample_z = np.random.uniform(-1, 1, size=(16, z_size))
+	gen_samples = sess.run(
+				   generator(input_z, input_size, n_units=g_hidden_size, reuse=True, alpha=alpha),
+				   feed_dict={input_z: sample_z})
 _ = view_samples(0, [gen_samples])
-

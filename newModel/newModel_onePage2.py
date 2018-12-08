@@ -20,6 +20,16 @@ def model_inputs(real_dim, z_dim):
 	
 def generator(z, out_dim, n_units=128, reuse=False, alpha=0.01):
 	with tf.variable_scope('generator', reuse=reuse):
+		d1 = tf.layers.dense(label, 128, activation=tf.nn.relu)		#to confirm: output size as 128*1*1?
+		d2 = tf.layers.conv2d_transpose(d1, 512, 2,'same','channels_last','leaky_relu')		#filter=100, kernel_size=2*1, stride=1, padding='same'
+		d3 = tf.layers.conv2d_transpose(d2, 256, 2,'same','channels_last','leaky_relu')		
+		d4 = tf.layers.conv2d_transpose(d3, 128, 2,'same','channels_last','leaky_relu')		
+		d5 = tf.layers.conv2d_transpose(d4, 3, 2,'same','channels_last','leaky_relu')
+		d_logit = tf.layers.dense(d5, 784, activation=None) #generate a 28*28*1 fake image		
+		out = tf.tanh(d_logit)
+		return out
+		
+		'''
 		# Hidden layer
 		h1 = tf.layers.dense(z, n_units, activation=None)
 		# Leaky ReLU
@@ -30,9 +40,22 @@ def generator(z, out_dim, n_units=128, reuse=False, alpha=0.01):
 		out = tf.tanh(logits)
 		
 		return out
+		'''
 		
 def discriminator(x, n_units=128, reuse=False, alpha=0.01):
 	with tf.variable_scope('discriminator', reuse=reuse):
+		c1 = tf.nn.convolution(img, 64, 5, 2, 'same','channels_last','leaky_relu')
+		c2 = tf.nn.convolution(c1, 128, 5, 2, 'same','channels_last','leaky_relu')
+		c3 = tf.nn.convolution(c2, 256, 5, 2, 'same','channels_last','leaky_relu')
+		c4 = tf.nn.convolution(c3, 512, 5, 2, 'same','channels_last','leaky_relu')
+		c5 = tf.nn.convolution(c4, 28, 5, 2, 'same','channels_last','leaky_relu')		
+
+		logits = tf.layers.dense(c5, 1, activation=None)
+		out = tf.sigmoid(logits)
+		
+		return out, logits		
+		
+		'''
 		# Hidden layer
 		h1 = tf.layers.dense(x, n_units, activation=None)
 		# Leaky ReLU
@@ -42,6 +65,7 @@ def discriminator(x, n_units=128, reuse=False, alpha=0.01):
 		out = tf.sigmoid(logits)
 		
 		return out, logits
+		'''
 
 # Size of input image to discriminator
 input_size = 784

@@ -4,9 +4,13 @@ import pickle as pkl
 import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot %matplotlib inline
+from input_fn import input_fn
 
 from tensorflow.examples.tutorials.mnist import input_data
 mnist = input_data.read_data_sets('MNIST_data')
+
+features, labels = input_fn('GAN.json', 'training_data/*')
+
 
 def model_inputs(real_dim, z_dim):
     inputs_real = tf.placeholder(tf.float32, (None, real_dim), name='input_real') 
@@ -43,7 +47,7 @@ def discriminator(x, n_units=128, reuse=False, alpha=0.01):
 #input_size = 784
 input_size = 65536
 # Size of latent vector to generator
-z_size = 100
+z_size = 443
 # Sizes of hidden layers in generator and discriminator
 g_hidden_size = 128
 d_hidden_size = 128
@@ -88,7 +92,7 @@ d_vars = [var for var in t_vars if var.name.startswith('discriminator')]
 d_train_opt = tf.train.AdamOptimizer(learning_rate).minimize(d_loss, var_list=d_vars)
 g_train_opt = tf.train.AdamOptimizer(learning_rate).minimize(g_loss, var_list=g_vars)
 
-batch_size = 100
+batch_size = 16
 epochs = 100
 samples = []
 losses = []
@@ -97,20 +101,25 @@ saver = tf.train.Saver(var_list=g_vars)
 with tf.Session() as sess:
     sess.run(tf.global_variables_initializer())
     for e in range(epochs):
-        for ii in range(mnist.train.num_examples//batch_size):
-            batch = mnist.train.next_batch(batch_size)
-            
-            # Get images, reshape and rescale to pass to D
-            batch_images = batch[0].reshape((batch_size, 784))
-            batch_images = batch_images*2 - 1
-            
-            # Sample random noise for G
-            batch_z = np.random.uniform(-1, 1, size=(batch_size, z_size))
-            
-            # Run optimizers
-            _ = sess.run(d_train_opt, feed_dict={input_real: batch_images, input_z: batch_z})
-            _ = sess.run(g_train_opt, feed_dict={input_z: batch_z})
-        
+		features_batch, labels_batch = sess.run([features, labels])
+	
+		batch_images = features_batch.reshape((batch_size, 784))
+		batch_images = batch_images*2 - 1
+		
+		# Sample random noise for G
+		batch_z_pre = np.random.uniform(-1, 1, size=(batch_size, z_size))
+		labels_batch_pre = labels_batch.eval(sess)
+		
+		batch_z = np.empty([batch_size,z_size])
+		
+		for x,y in zip(batch_z_pre, labels_batch_pre):
+			a1 = np.concatenate(x,y,axis=1)
+			batch_z.append(a1, axis=0)
+		
+		# Run optimizers
+		_ = sess.run(d_train_opt, feed_dict={input_real: batch_images, input_z: batch_z})
+		_ = sess.run(g_train_opt, feed_dict={input_z: batch_z})
+	
         # At the end of each epoch, get the losses and print them out
         train_loss_d = sess.run(d_loss, {input_z: batch_z, input_real: batch_images})
         train_loss_g = g_loss.eval({input_z: batch_z})
@@ -122,7 +131,14 @@ with tf.Session() as sess:
         losses.append((train_loss_d, train_loss_g))
         
         # Sample from generator as we're training for viewing afterwards
-        sample_z = np.random.uniform(-1, 1, size=(16, z_size))
+        sample_z_pre = np.random.uniform(-1, 1, size=(batch_size, z_size))
+		
+		sample_z = np.empty([batch_size,z_size])
+		
+		for x,y in zip(batch_z_pre, labels_batch_pre):
+			a1 = np.concatenate(x,y,axis=1)
+			sample_z.append(a1, axis=0)		
+		
         gen_samples = sess.run(
                        generator(input_z, input_size, n_units=g_hidden_size, reuse=True, alpha=alpha),
                        feed_dict={input_z: sample_z})

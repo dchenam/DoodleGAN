@@ -72,7 +72,7 @@ class GAN(BaseModel):
         self.d_optim = tf.train.AdamOptimizer(self.config.d_learning_rate, beta1=self.beta1, beta2=self.beta2).minimize(
             self.d_loss, var_list=d_vars)
         self.g_optim = tf.train.AdamOptimizer(self.config.g_learning_rate, beta1=self.beta1, beta2=self.beta2).minimize(
-            self.g_loss, var_list=g_vars)
+            self.g_loss, global_step=self.global_step_tensor, var_list=g_vars)
 
     def generator(self, noise, label, reuse=False):
         with tf.variable_scope('generator', reuse=reuse):

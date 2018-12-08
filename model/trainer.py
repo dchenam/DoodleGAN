@@ -29,23 +29,22 @@ class Trainer(BaseTrain):
         g_losses = []
         d_losses = []
         for it in trange(self.config.num_iter_per_epoch):
+            cur_it = self.model.global_step_tensor.eval(self.sess)
             g_loss, d_loss = self.train_step()
             g_losses.append(g_loss)
             d_losses.append(d_loss)
-            if it % self.config.save_iter == 0:
+            if cur_it % self.config.save_iter == 0:
                 self.model.save(self.sess)
-            if it % self.config.sample_iter == 0:
-                print("sampling...")
+            if cur_it % self.config.sample_iter == 0:
                 image = self.sess.run([self.model.sample_image])
                 image = denorm(np.squeeze(image))
-                print(image)
-                sample_path = os.path.join(self.config.sample_dir, '{}-sample.jpg'.format(it))
+                sample_path = os.path.join(self.config.sample_dir, '{}-sample.jpg'.format(cur_it))
                 skimage.io.imsave(sample_path, image)
-            if it % 100 == 0:
+            if cur_it % 100 == 0:
                 summaries_dict = {}
                 summaries_dict['g_loss'] = g_loss
                 summaries_dict['d_loss'] = d_loss
-                self.logger.summarize(it, summaries_dict=summaries_dict)
+                self.logger.summarize(cur_it, summaries_dict=summaries_dict)
 
         g_loss = np.mean(g_losses)
         d_loss = np.mean(d_losses)

@@ -1,4 +1,5 @@
 import tensorflow as tf
+import scipy.misc
 import numpy as np
 
 
@@ -21,3 +22,7 @@ def print_network():
 def denorm(image):
     image = (image + 1) / 2
     return np.clip(image, 0, 1)
+
+
+def normalize(x):
+    return x / 127.5 - 1

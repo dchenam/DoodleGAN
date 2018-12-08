@@ -41,12 +41,6 @@ def main():
     # in the features - class_index & doodle
     input = input_fn(config, filenames)
 
-    feat, label = input
-    feature = sess.run(feat)
-    print(feature.shape)
-    print(np.max(feature))
-    print(np.min(feature))
-
     # create instance of the model you want
     model = GAN(config, input)
 

@@ -20,7 +20,7 @@ def model_inputs(real_dim, z_dim):
 	
 def generator(z, out_dim, n_units=128, reuse=False, alpha=0.01):
 	with tf.variable_scope('generator', reuse=reuse):
-		d1 = tf.layers.dense(label, 128, activation=tf.nn.relu)		#to confirm: output size as 128*1*1?
+		d1 = tf.layers.dense(z, 128, activation=tf.nn.relu)		#to confirm: output size as 128*1*1?
 		d2 = tf.layers.conv2d_transpose(d1, 512, 2,'same','channels_last','leaky_relu')		#filter=100, kernel_size=2*1, stride=1, padding='same'
 		d3 = tf.layers.conv2d_transpose(d2, 256, 2,'same','channels_last','leaky_relu')		
 		d4 = tf.layers.conv2d_transpose(d3, 128, 2,'same','channels_last','leaky_relu')		
@@ -44,7 +44,7 @@ def generator(z, out_dim, n_units=128, reuse=False, alpha=0.01):
 		
 def discriminator(x, n_units=128, reuse=False, alpha=0.01):
 	with tf.variable_scope('discriminator', reuse=reuse):
-		c1 = tf.nn.convolution(img, 64, 5, 2, 'same','channels_last','leaky_relu')
+		c1 = tf.nn.convolution(x, 64, 5, 2, 'same','channels_last','leaky_relu')
 		c2 = tf.nn.convolution(c1, 128, 5, 2, 'same','channels_last','leaky_relu')
 		c3 = tf.nn.convolution(c2, 256, 5, 2, 'same','channels_last','leaky_relu')
 		c4 = tf.nn.convolution(c3, 512, 5, 2, 'same','channels_last','leaky_relu')
@@ -126,18 +126,10 @@ with tf.Session() as sess:
 	sess.run(tf.global_variables_initializer())
 	for e in range(epochs):
 		features_batch, labels_batch = sess.run([features, labels])
-		batch_images = features_batch.reshape((batch_size, 784))
-		batch_images = batch_images*2 - 1
-
-		# Sample random noise for G
-		batch_z_pre = np.random.uniform(-1, 1, size=(batch_size, z_size))
-		labels_batch_pre = labels_batch.eval(sess)
-
-		batch_z = np.empty([batch_size,z_size])
 		
-		for x,y in zip(batch_z_pre, labels_batch_pre):
-			a1 = np.concatenate(x,y,axis=1)
-			batch_z.append(a1, axis=0)
+		noise = tf.random_normal([0,100])
+		batch_z = tf.concat([labels_batch, noise], -1)
+		batch_z = tf.reshape(batch_z, [batch_size, 1,1,100+label.shape(1)])		#label.shape(1)=345, numOfClass
 
 		# Run optimizers
 		_ = sess.run(d_train_opt, feed_dict={input_real: batch_images, input_z: batch_z})
@@ -153,14 +145,10 @@ with tf.Session() as sess:
 		# Save losses to view after training
 		losses.append((train_loss_d, train_loss_g))
 
-		# Sample from generator as we're training for viewing afterwards
-		sample_z_pre = np.random.uniform(-1, 1, size=(batch_size, z_size))
-
-		sample_z = np.empty([batch_size,z_size])
-
-		for x,y in zip(batch_z_pre, labels_batch_pre):
-			a1 = np.concatenate(x,y,axis=1)
-			sample_z.append(a1, axis=0)		
+		# Sample from generator as we're training for viewing afterwards		
+		noise2 = tf.random_normal([0,100])
+		sample_z = tf.concat([labels_batch, noise2], -1)
+		sample_z = tf.reshape(batch_z, [batch_size, 1,1,100+label.shape(1)])		#label.shape(1)=345, numOfClass		
 
 		gen_samples = sess.run(
 					   generator(input_z, input_size, n_units=g_hidden_size, reuse=True, alpha=alpha),

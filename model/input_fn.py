@@ -16,13 +16,14 @@ def input_fn(config, filenames):
         block_length=1)
 
     dataset = (dataset
-               .map(functools.partial(parse_fn), num_parallel_calls=10)
+               .map(functools.partial(parse_fn), num_parallel_calls=4)
                .shuffle(buffer_size=1000000)
                .repeat()
                .batch(config.batch_size)
-               .prefetch(config.batch_size)
+               # .prefetch(config.batch_size)
                )
     features, labels = dataset.make_one_shot_iterator().get_next()
+    print("input dimensions: ", features.shape, labels.shape)
 
     return (features, labels)
 
@@ -42,14 +43,9 @@ def parse_fn(drawit_proto):
     features = parsed_features['doodle']
 
     features = tf.reshape(features, [28, 28, 1])
-    features = tf.cast(features, tf.uint8)
+    features = tf.cast(features, tf.float32)
 
-    # convert from 0 - 255 to 0 - 1
-    features = tf.image.convert_image_dtype(features, tf.float32)
-
-    # normalize images from 0 - 1 to between -1 and 1
-    features = tf.multiply(features, 2)
-    features = tf.subtract(features, 1)
+    features = (features / 127.5) - 1
 
     return features, labels
 
@@ -57,25 +53,26 @@ def parse_fn(drawit_proto):
 def mnist_input(config):
     (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
 
-
     def train_preprocess(image, label):
         image = (image / 127.5) - 1
-        label = tf.one_hot(label, 345)
+        image = tf.reshape(image, [28, 28, 1])
+        label = tf.one_hot(label, config.num_classes)
         return image, label
 
-
     def create_mnist_dataset(data, labels, batch_size):
-      def gen():
-        for image, label in zip(data, labels):
-            yield image, label
-      ds = tf.data.Dataset.from_generator(gen, (tf.float32, tf.int32), ((28,28 ), ()))
+        def gen():
+            for image, label in zip(data, labels):
+                yield image, label
 
-      return ds.map(train_preprocess).shuffle(len(data)).repeat().batch(batch_size)
+        ds = tf.data.Dataset.from_generator(gen, (tf.float32, tf.int32), ((28, 28), ()))
 
-    #train and validation dataset with different batch size
+        return ds.map(train_preprocess).shuffle(len(data)).repeat().batch(batch_size)
+
+    # train and validation dataset with different batch size
     train_dataset = create_mnist_dataset(x_train, y_train, config.batch_size)
-    valid_dataset = create_mnist_dataset(x_test, y_test, config.batch_size)
-    
+    # valid_dataset = create_mnist_dataset(x_test, y_test, config.batch_size)
+
     image, label = train_dataset.make_one_shot_iterator().get_next()
-    
+    print("input dimensions: ", image.shape, label.shape)
+
     return (image, label)

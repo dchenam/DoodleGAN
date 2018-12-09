@@ -1,4 +1,8 @@
 training_data/
+training_data_small/
+
+*.jpg
+*.ipynb
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

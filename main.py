@@ -2,10 +2,10 @@ import os
 import logging
 import tensorflow as tf
 import numpy as np
-import matplotlib.pyplot as plt
+import skimage.io
 from shutil import copy
 
-from model.input_fn import input_fn
+from model.input_fn import input_fn, mnist_input
 from model.models import GAN
 from model.trainer import Trainer
 from utils import *
@@ -34,12 +34,29 @@ def main():
 
     is_training = True
 
-    # filenames should be type of file pattern
-    filenames = 'training_data/training.tfrecord-?????-of-?????'
+    if args.data == 'drawit':
+        config.num_classes = 345
+        # filenames should be type of file pattern
+        filenames = 'training_data/training.tfrecord-?????-of-?????'
 
-    # create your data input pipeline
-    # in the features - class_index & doodle
-    input = input_fn(config, filenames)
+        # create your data input pipeline
+        # in the features - class_index & doodle
+        input = input_fn(config, filenames)
+        print("using drawit data")
+
+    elif args.data == 'mnist':
+        config.num_classes = 10
+        input = mnist_input(config)
+        print("using mnist data")
+
+    else:
+        raise ("no dataset chosen")
+
+    # img, label = sess.run(input)
+    #
+    # image = denorm(np.squeeze(img[0]))
+    # sample_path = os.path.join('test.jpg')
+    # skimage.io.imsave(sample_path, image)
 
     # create instance of the model you want
     model = GAN(config, input)

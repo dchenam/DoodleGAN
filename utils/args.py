@@ -18,5 +18,10 @@ def get_args():
         default='train',
         choices=['train', 'test'],
         help='choose between training and testing mode')
+    argparser.add_argument(
+        '--data',
+        default='drawit',
+        choices=['drawit', 'mnist'],
+        help='choose between training and testing mode')
     args = argparser.parse_args()
     return args

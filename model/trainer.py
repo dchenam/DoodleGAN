@@ -1,11 +1,13 @@
 from base import BaseTrain
+from utils import denorm
+
 from tqdm import trange
+import tensorflow as tf
 import numpy as np
 import skimage.io
 import logging
 import time
 import os
-from utils import denorm
 
 
 # TODO: change tensorboard summaries to appropriate tags, generate sample of image and write to disk every _ epochs
@@ -15,49 +17,42 @@ class Trainer(BaseTrain):
 
     def train(self):
         """overrode default base function for custom function
-            - logs total duration of training in seconds
-        """
+             - logs total duration of training in seconds
+         """
         tik = time.time()
-        for cur_epoch in range(self.model.cur_epoch_tensor.eval(self.sess), self.config.num_epochs + 1, 1):
-            self.train_epoch()
-            self.sess.run(self.model.increment_cur_epoch_tensor)
-        tok = time.time()
-        logging.info('Duration: {} seconds'.format(tok - tik))
-
-    def train_epoch(self):
-        """logging summary to tensorboard and executing training steps per epoch"""
-        g_losses = []
-        d_losses = []
-        for it in trange(self.config.num_iter_per_epoch):
-            cur_it = self.model.global_step_tensor.eval(self.sess)
-            g_loss, d_loss = self.train_step()
-            g_losses.append(g_loss)
-            d_losses.append(d_loss)
-            if cur_it % self.config.save_iter == 0:
+        for it in trange(self.config.num_iter):
+            g_loss, d_loss, d_loss1, d_loss2, d_loss3 = self.train_step()
+            if it % self.config.save_iter == 0:
                 self.model.save(self.sess)
-            if cur_it % self.config.sample_iter == 0:
-                image = self.sess.run([self.model.sample_image])
-                image = denorm(np.squeeze(image))
-                sample_path = os.path.join(self.config.sample_dir, '{}-sample.jpg'.format(cur_it))
-                skimage.io.imsave(sample_path, image)
-            if cur_it % 100 == 0:
+            if it % self.config.sample_iter == 0:
+                images = self.sess.run([self.model.sample_image])
+
+                # tf image summary for cloud servers
+                # summaries_dict = {}
+                # summaries_dict['sample_image'] = np.array(image).reshape([1, 28, 28, 1])
+                # self.logger.summarize(it, summaries_dict=summaries_dict)
+
+                for i, image in enumerate(images[0]):
+                    image = denorm(np.squeeze(image))
+                    sample_path = os.path.join(self.config.sample_dir, '{}-{}-sample.jpg'.format(i, it))
+                    skimage.io.imsave(sample_path, image)
+
+            if it % 100 == 0:
                 summaries_dict = {}
                 summaries_dict['g_loss'] = g_loss
                 summaries_dict['d_loss'] = d_loss
-                self.logger.summarize(cur_it, summaries_dict=summaries_dict)
+                summaries_dict['d_real_loss'] = d_loss1
+                summaries_dict['d_wrong_loss'] = d_loss2
+                summaries_dict['d_fake_loss'] = d_loss3
+                self.logger.summarize(it, summaries_dict=summaries_dict)
 
-        g_loss = np.mean(g_losses)
-        d_loss = np.mean(d_losses)
-
-        cur_it = self.model.global_step_tensor.eval(self.sess)
-
-        summaries_dict = {}
-        summaries_dict['average_epoch_g_loss'] = g_loss
-        summaries_dict['average_epoch_d_loss'] = d_loss
-        self.logger.summarize(cur_it, summaries_dict=summaries_dict)
+        tok = time.time()
+        logging.info('Duration: {} seconds'.format(tok - tik))
 
     def train_step(self):
         """using `tf.data` API, so no feed-dict required"""
-        _, d_loss = self.sess.run([self.model.d_optim, self.model.d_loss])
-        _, g_loss = self.sess.run([self.model.g_optim, self.model.g_loss])
-        return g_loss, d_loss
+        with tf.control_dependencies(tf.get_collection(tf.GraphKeys.UPDATE_OPS)):
+            _, d_loss, d_loss1, d_loss2, d_loss3 = self.sess.run(
+                [self.model.d_optim, self.model.d_loss, self.model.d_loss1, self.model.d_loss2, self.model.d_loss3])
+            _, g_loss = self.sess.run([self.model.g_optim, self.model.g_loss])
+        return g_loss, d_loss, d_loss1, d_loss2, d_loss3

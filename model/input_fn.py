@@ -70,7 +70,7 @@ def mnist_input(config):
             yield image, label
       ds = tf.data.Dataset.from_generator(gen, (tf.float32, tf.int32), ((28,28 ), ()))
 
-      return ds.map(train_preprocess).repeat().batch(batch_size)
+      return ds.map(train_preprocess).shuffle(len(data)).repeat().batch(batch_size)
 
     #train and validation dataset with different batch size
     train_dataset = create_mnist_dataset(x_train, y_train, config.batch_size)

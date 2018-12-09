@@ -20,7 +20,7 @@ def input_fn(config, filenames):
                .shuffle(buffer_size=1000000)
                .repeat()
                .batch(config.batch_size)
-               .prefetch(1)
+               .prefetch(config.batch_size)
                )
     features, labels = dataset.make_one_shot_iterator().get_next()
 
@@ -52,3 +52,30 @@ def parse_fn(drawit_proto):
     features = tf.subtract(features, 1)
 
     return features, labels
+
+
+def mnist_input(config):
+    (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
+
+
+    def train_preprocess(image, label):
+        image = (image / 127.5) - 1
+        label = tf.one_hot(label, 345)
+        return image, label
+
+
+    def create_mnist_dataset(data, labels, batch_size):
+      def gen():
+        for image, label in zip(data, labels):
+            yield image, label
+      ds = tf.data.Dataset.from_generator(gen, (tf.float32, tf.int32), ((28,28 ), ()))
+
+      return ds.map(train_preprocess).repeat().batch(batch_size)
+
+    #train and validation dataset with different batch size
+    train_dataset = create_mnist_dataset(x_train, y_train, config.batch_size)
+    valid_dataset = create_mnist_dataset(x_test, y_test, config.batch_size)
+    
+    image, label = train_dataset.make_one_shot_iterator().get_next()
+    
+    return (image, label)

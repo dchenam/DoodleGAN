@@ -10,7 +10,6 @@ import time
 import os
 
 
-# TODO: change tensorboard summaries to appropriate tags, generate sample of image and write to disk every _ epochs
 class Trainer(BaseTrain):
     def __init__(self, sess, model, config, logger):
         super(Trainer, self).__init__(sess, model, config, logger)
@@ -26,11 +25,6 @@ class Trainer(BaseTrain):
                 self.model.save(self.sess)
             if it % self.config.sample_iter == 0:
                 images = self.sess.run([self.model.sample_image])
-
-                # tf image summary for cloud servers
-                # summaries_dict = {}
-                # summaries_dict['sample_image'] = np.array(image).reshape([1, 28, 28, 1])
-                # self.logger.summarize(it, summaries_dict=summaries_dict)
 
                 for i, image in enumerate(images[0]):
                     image = denorm(np.squeeze(image))

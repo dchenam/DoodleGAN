@@ -2,7 +2,7 @@ import tensorflow as tf
 import functools
 
 
-def input_fn(config, filenames):
+def input_fn(filenames, config=None):
     """Estimator `input_fn`.
     """
     # Preprocess 10 files concurrently and interleaves records from each file.

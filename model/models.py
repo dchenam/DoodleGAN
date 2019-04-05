@@ -114,3 +114,4 @@ class GAN(BaseModel):
     def init_saver(self):
         with tf.name_scope("saver"):
             self.saver = tf.train.Saver(max_to_keep=self.config.max_to_keep)
+

@@ -11,9 +11,7 @@ from model.trainer import Trainer
 from utils import *
 
 
-# TODO: add distribution strategy support (mirrored, all-reduce, or parameter-server)
-# TODO: possibly change API to estimators or tf.contrib.gan estimators
-
+# Local Training
 def main():
     # capture the config path from the run arguments
     # then process the json configuration file
@@ -41,7 +39,7 @@ def main():
 
         # create your data input pipeline
         # in the features - class_index & doodle
-        input = input_fn(config, filenames)
+        input = input_fn(filenames, config)
         print("using drawit data")
 
     elif args.data == 'mnist':
